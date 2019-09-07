@@ -3,6 +3,7 @@
 import sys
 import json
 import math
+import queue
 from data_analyze.analysis import Analyzer
 
 sys.path.append('../')
@@ -21,13 +22,14 @@ class DataProcessor(object):
 
     def __init__(self, input_file='../data/data.csv', file_type='csv', save_path='../data'):
         self.res = []
-        self.send = [[] for i in range(14405)]
+        self.send = []
         self.save_path = save_path
         self.input_file = input_file
         self.file_type = file_type
         self.ip_set = {}
         self.max_time = -1.0
         self.all_time = 144
+        self.msg_queue = queue.Queue()
 
     def _save_res(self):
         json_str = json.dumps({'point_data': self.res})
@@ -83,47 +85,58 @@ class DataProcessor(object):
         :param protocol: 协议
         :return: 无
         '''
+
+        try:
+            startTime = float(timestamp)
+        except Exception:
+            startTime = float(eval(timestamp))
+
+        try:
+            self.max_time = max(startTime, self.max_time)
+        except Exception:
+            raise Exception('Time data is wrong %s !' % str(timestamp))
+
+        self.msg_queue.put(dict(startTime=startTime,
+                                srcID=self.ip_set[source_ip],
+                                desID=self.ip_set[des_ip],
+                                timeLength=1,
+                                sport=source_port,
+                                dport=des_port,
+                                protocol=protocol))
+
+    def trans_time_axis(self):
+        '''
+        将时间映射到固定时间轴
+        :return:
+        '''
         if self.max_time < 0.0:
             raise Exception('ERROR: This data has wrong time data! --- max_time has wrong %f' %  self.max_time)
-        try:
-            index = math.ceil(self.all_time * float(timestamp) / self.max_time)
-        except Exception as e:
-            raise Exception('ERROR: This data has wrong time data! --- timestamp has wrong %s' % timestamp)
 
-        if not (0 <= index < 14405):
-            raise Exception('ERROR: This data has wrong time data! --- index has wrong')
+        last_msg = None
+        while(self.msg_queue.empty() == False):
+            msg = self.msg_queue.get()
+            try:
+                index = math.ceil(self.all_time * msg['startTime'] / self.max_time)
+            except Exception:
+                raise Exception('ERROR: This data has wrong time data! --- timestamp has wrong %s' % timestamp)
 
-        self.send[index].append(dict(srcID=self.ip_set[source_ip],
-                                     desID=self.ip_set[des_ip],
-                                     timeLength=1,
-                                     sport=source_port,
-                                     dport=des_port,
-                                     protocol=protocol))
+            if not (0 <= index < 14405):
+                raise Exception('ERROR: This data has wrong time data! --- index has wrong')
+
+            msg.update({'startTime':index})
+            if last_msg and msg['startTime'] == last_msg['startTime'] and \
+                            ((msg['srcID'] == last_msg['srcID'] and msg['desID'] == last_msg['desID']) or
+                             (msg['srcID'] == last_msg['srcID'] and msg['desID'] == last_msg['desID'])):
+                continue
+
+            self.send.append(msg)
+            last_msg = msg
 
     def process_csv(self):
         '''
         对csv文件的处理，csv文件一定需要按照time, source_ip, source_port, des_ip, des_port, protocol存下来
         :return:
         '''
-        # 寻找时间最大值
-        is_first_line = True
-        with open(self.input_file, 'rb') as f:
-            for xline in f:
-                if is_first_line:
-                    is_first_line = False
-                    continue
-                try:
-                    line = xline.decode('utf-8')
-                    data = line.split(',')
-                    real_time = data[0]
-
-                    if '"' in real_time or "'" in real_time:
-                        real_time = eval(real_time)
-
-                except Exception as e:
-                    continue
-            self.max_time = max(self.max_time, float(real_time))
-        f.close()
 
         is_first_line = True
         with open(self.input_file, 'rb') as f:
@@ -173,6 +186,7 @@ class DataProcessor(object):
         #     print("%s: %s" % (p['id'], str(p['link'])))
         # self.remove_duplicates()
         self._save_res()
+        self.trans_time_axis()
         self._save_send()
         print('sucess')
 
