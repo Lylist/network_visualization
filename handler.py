@@ -2,8 +2,12 @@
 # coding=utf-8
 
 import sys
+import os
 import getopt
-from data_process.processor import process
+from data_process.processor import DataProcessor
+os.environ["PATH"] += ';' + os.getcwd() + '\\visualization'
+sys.path.append(os.getcwd()+'\\visualization')
+sys.path.append('./data_process')
 
 if __name__ == '__main__':
     argv = sys.argv[1:]
@@ -29,4 +33,6 @@ if __name__ == '__main__':
 
     print('file_type:%s' % file_type)
     print('input_file:%s' % input_file)
-    process(input_file, file_type)
+    processor = DataProcessor(input_file, file_type, save_path='data')
+    processor.process()
+    os.system('Blog-master.exe')
