@@ -5,6 +5,8 @@ import json
 import math
 import queue
 from data_analyze.analysis import Analyzer
+from scapy.all import *
+import time
 
 sys.path.append('../')
 
@@ -20,7 +22,7 @@ class DataProcessor(object):
         max_time: 数据最大的时间戳
     '''
 
-    def __init__(self, input_file='../data/data.csv', file_type='csv', save_path='../data'):
+    def __init__(self, input_file='../data/data.csv', file_type='csv', all_time=14400, save_path='../data'):
         self.res = []
         self.send = []
         self.save_path = save_path
@@ -28,7 +30,7 @@ class DataProcessor(object):
         self.file_type = file_type
         self.ip_set = {}
         self.max_time = -1.0
-        self.all_time = 144
+        self.all_time = all_time
         self.msg_queue = queue.Queue()
 
     def _save_res(self):
@@ -38,9 +40,11 @@ class DataProcessor(object):
         wf.close()
 
     def _save_send(self):
-        json_str = json.dumps({'send_data': self.send})
         with open(self.save_path + '/send.json', 'w') as wf:
-            wf.write(json_str)
+            for msg in self.send:
+                json_str = str(msg['startTime']) + ' ' + str(msg['srcID']) + ' ' \
+                           + str(msg['desID']) + ' ' + str(msg['timeLength']) + '\n'
+                wf.write(json_str)
         wf.close()
 
     def remove_duplicates(self):
@@ -74,7 +78,7 @@ class DataProcessor(object):
         self.res[des_id]['link'].add(source_id)
         self.res[source_id]['link'].add(des_id)
 
-    def add_message(self, timestamp, source_ip, source_port, des_ip, des_port, protocol):
+    def add_message(self, timestamp, source_ip, des_ip):
         '''
         添加一条数据报
         :param timestamp: 发报文时间
@@ -99,10 +103,7 @@ class DataProcessor(object):
         self.msg_queue.put(dict(startTime=startTime,
                                 srcID=self.ip_set[source_ip],
                                 desID=self.ip_set[des_ip],
-                                timeLength=1,
-                                sport=source_port,
-                                dport=des_port,
-                                protocol=protocol))
+                                timeLength=1))
 
     def trans_time_axis(self):
         '''
@@ -139,39 +140,69 @@ class DataProcessor(object):
         '''
 
         is_first_line = True
+
+        read_time = 0
+        add_point_time = 0
+        add_msg_time = 0
+        cnt = 0
         with open(self.input_file, 'rb') as f:
             for xline in f:
+                t0 = time.clock()
                 if is_first_line:
                     is_first_line = False
                     continue
-                # try:
-                line = xline.decode('utf-8')
-                data = line.split(',')
-                real_time = data[0]
-                source_ip = data[1]
-                source_port = data[2]
-                des_ip = data[3]
-                des_port = data[4]
-                protocol = data[5]
+                try:
+                    line = xline.decode('utf-8')
+                    data = line.split(',')
+                    real_time = data[0]
+                    source_ip = data[1]
+                    des_ip = data[3]
+
+                except Exception as e:
+                    continue
 
                 if source_ip == '' or des_ip == '':
                     continue
-                # 处理嵌套字符串的情况
-                if '"' in real_time or "'" in real_time:
-                    real_time = eval(real_time)
+                read_time += time.clock() - t0
+                t0 = time.clock()
                 self.add_point(source_ip, des_ip)
-                self.add_message(real_time, source_ip, source_port, des_ip, des_port, protocol)
+                add_point_time += time.clock() - t0
+                t0 = time.clock()
+                self.add_message(real_time, source_ip, des_ip)
+                add_msg_time += time.clock() - t0
+                # cnt += 1
+                # if cnt > 1000:
+                #     break
 
-                # except Exception as e:
-                #     print(str(e))
         f.close()
+        print(read_time)
+        print(add_point_time)
+        print(add_msg_time)
 
     def process_pcap(self):
-        '''
-        处理pcap包
-        :return:
-        '''
-        pass
+        is_first_line = True
+        time = 0
+        pcap = rdpcap(self.input_file)
+        for data in pcap:
+            time += 1
+
+            if is_first_line:
+                is_first_line = False
+                continue
+            try:
+                real_time = time
+                time += 1
+                source_ip = data[IP].src
+                des_ip = data[IP].dst
+
+            except Exception as e:
+                continue
+
+            if source_ip == '' or des_ip == '':
+                continue
+
+            self.add_point(source_ip, des_ip)
+            self.add_message(real_time, source_ip, des_ip)
 
     def process(self):
         if self.file_type == 'csv':
@@ -179,15 +210,23 @@ class DataProcessor(object):
         else:
             self.process_pcap()
 
+        # t0 = time.clock()
         analyzer = Analyzer(self.res)
         self.res = analyzer.process()
+        # print(time.clock() - t0)
 
         # for p in self.res:
         #     print("%s: %s" % (p['id'], str(p['link'])))
         # self.remove_duplicates()
+        # t0 = time.clock()
         self._save_res()
+        # print(time.clock() - t0)
+        # t0 = time.clock()
         self.trans_time_axis()
+        # print(time.clock() - t0)
+        # t0 = time.clock()
         self._save_send()
+        # print(time.clock() - t0)
         print('sucess')
 
 

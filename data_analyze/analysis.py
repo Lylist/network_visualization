@@ -57,9 +57,10 @@ class Analyzer(object):
 
     def block_init_begin(self):
         self.iniradius = 5
+        self.floor = 1
         self.r = 5
         self.circle_center = {'x': 0.0, 'y': 0.0, 'z': 0.0}
-        self.delta = PI / 2
+        self.delta = PI/2
         self.alpha = 0
 
     def block_init_fulllayer(self):
@@ -80,7 +81,7 @@ class Analyzer(object):
         当排满一圈后初始化r、delta和alpha
         :return: 无返回值
         '''
-        self.r += self.iniradius
+        self.r += 5
         self.delta = (PI/2)*(self.iniradius/self.r)
         self.alpha = 0
 
@@ -109,7 +110,7 @@ class Analyzer(object):
 
         self.sort(network)
 
-        self.r = 10
+        self.r = 5
         self.circle_center = {'x': 0.0, 'y': 0.0, 'z': 0.0}
         self.delta = PI / 2
         self.alpha = 0
