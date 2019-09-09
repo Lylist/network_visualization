@@ -63,16 +63,20 @@ class DataProcessor(object):
         :param des_ip: 目的ip
         :return: 无
         '''
-        if not self.ip_set.get(source_ip):
+        if self.ip_set.get(source_ip) == None:
             new_id = len(self.ip_set)
             self.ip_set[source_ip] = new_id
+
             self.res.append(dict(id=new_id, ip=source_ip, link=set([]), device='computer',
                                  location=dict(x=0, y=0, z=0)))
-        if not self.ip_set.get(des_ip):
+
+        if self.ip_set.get(des_ip) == None:
             new_id = len(self.ip_set)
             self.ip_set[des_ip] = new_id
+
             self.res.append(dict(id=new_id, ip=des_ip, link=set([]), device='computer',
                                  location=dict(x=0, y=0, z=0)))
+
         des_id = self.ip_set[des_ip]
         source_id = self.ip_set[source_ip]
         self.res[des_id]['link'].add(source_id)
@@ -127,7 +131,7 @@ class DataProcessor(object):
             msg.update({'startTime':index})
             if last_msg and msg['startTime'] == last_msg['startTime'] and \
                             ((msg['srcID'] == last_msg['srcID'] and msg['desID'] == last_msg['desID']) or
-                             (msg['srcID'] == last_msg['srcID'] and msg['desID'] == last_msg['desID'])):
+                             (msg['srcID'] == last_msg['desID'] and msg['desID'] == last_msg['srcID'])):
                 continue
 
             self.send.append(msg)
