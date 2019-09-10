@@ -63,20 +63,20 @@ class DataProcessor(object):
         :param des_ip: 目的ip
         :return: 无
         '''
-        #asdasdasds
+
         if self.ip_set.get(source_ip) == None:
             new_id = len(self.ip_set)
             self.ip_set[source_ip] = new_id
-
-            self.res.append(dict(id=new_id, ip=source_ip, link=set([]), device='computer',
-                                 location=dict(x=0, y=0, z=0)))
+            
+			if source_ip[0]=='A' or source_ip[0]=='C' or source_ip[0]=='f' source_ip[0]=='D':
+                self.res.append(dict(id=new_id, ip=source_ip, link=set([]), device='switch',location=dict(x=0, y=0, z=0)))
 
         if self.ip_set.get(des_ip) == None:
             new_id = len(self.ip_set)
             self.ip_set[des_ip] = new_id
-
-            self.res.append(dict(id=new_id, ip=des_ip, link=set([]), device='computer',
-                                 location=dict(x=0, y=0, z=0)))
+            
+            if des_ip[0]=='A' or des_ip[0]=='C' or des_ip[0]=='f' des_ip[0]=='D':
+                self.res.append(dict(id=new_id, ip=des_ip, link=set([]), device='switch',location=dict(x=0, y=0, z=0)))
 
         des_id = self.ip_set[des_ip]
         source_id = self.ip_set[source_ip]
