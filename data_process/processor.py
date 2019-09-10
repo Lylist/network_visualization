@@ -61,7 +61,7 @@ class DataProcessor(object):
     def check_switch(self, ip):
         for switch in swith_list:
             if switch in ip:
-                return Ture
+                return True
         
         return False
 
