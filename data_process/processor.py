@@ -68,7 +68,7 @@ class DataProcessor(object):
             new_id = len(self.ip_set)
             self.ip_set[source_ip] = new_id
             
-			if source_ip[0]=='A' or source_ip[0]=='C' or source_ip[0]=='f' source_ip[0]=='D':
+	    if source_ip[0]=='A' or source_ip[0]=='C' or source_ip[0]=='f' source_ip[0]=='D':
                 self.res.append(dict(id=new_id, ip=source_ip, link=set([]), device='switch',location=dict(x=0, y=0, z=0)))
 
         if self.ip_set.get(des_ip) == None:
