@@ -10,6 +10,8 @@ import time
 
 sys.path.append('../')
 
+swith_list = ['Apple', 'Dell', 'Cisco', 'fe', 'Dell']
+
 
 class DataProcessor(object):
     '''
@@ -55,6 +57,13 @@ class DataProcessor(object):
         for p in self.res:
             condition = lambda x: x < p['id']
             p['link'] = list(filter(condition, p['link']))
+            
+    def check_switch(self, ip):
+        for switch in swith_list:
+            if switch in ip:
+                return Ture
+        
+        return False
 
     def add_point(self, source_ip, des_ip):
         '''
@@ -67,21 +76,25 @@ class DataProcessor(object):
         if self.ip_set.get(source_ip) == None:
             new_id = len(self.ip_set)
             self.ip_set[source_ip] = new_id
-            
-	    if source_ip[0]=='A' or source_ip[0]=='C' or source_ip[0]=='f' source_ip[0]=='D':
+            if self.check_switch(source_ip):
                 self.res.append(dict(id=new_id, ip=source_ip, link=set([]), device='switch',location=dict(x=0, y=0, z=0)))
-
+            else:
+                self.res.append(dict(id=new_id, ip=source_ip, link=set([]), device='computer',location=dict(x=0, y=0, z=0)))
         if self.ip_set.get(des_ip) == None:
             new_id = len(self.ip_set)
             self.ip_set[des_ip] = new_id
-            
-            if des_ip[0]=='A' or des_ip[0]=='C' or des_ip[0]=='f' des_ip[0]=='D':
+            if self.check_switch(des_ip):
                 self.res.append(dict(id=new_id, ip=des_ip, link=set([]), device='switch',location=dict(x=0, y=0, z=0)))
-
-        des_id = self.ip_set[des_ip]
-        source_id = self.ip_set[source_ip]
-        self.res[des_id]['link'].add(source_id)
-        self.res[source_id]['link'].add(des_id)
+            else:
+                self.res.append(dict(id=new_id, ip=des_ip, link=set([]), device='computer',location=dict(x=0, y=0, z=0)))
+        
+        try:
+            des_id = self.ip_set[des_ip]
+            source_id = self.ip_set[source_ip]
+            self.res[des_id]['link'].add(source_id)
+            self.res[source_id]['link'].add(des_id)
+        except Exception as e:
+            raise Exception("ip has wrong (%s %s)" % (source_ip, des_ip))
 
     def add_message(self, timestamp, source_ip, des_ip):
         '''
