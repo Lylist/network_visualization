@@ -63,6 +63,7 @@ class DataProcessor(object):
         :param des_ip: 目的ip
         :return: 无
         '''
+        #asdasdasds
         if self.ip_set.get(source_ip) == None:
             new_id = len(self.ip_set)
             self.ip_set[source_ip] = new_id
