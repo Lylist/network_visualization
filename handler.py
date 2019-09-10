@@ -20,9 +20,8 @@ if __name__ == '__main__':
     except getopt.GetoptError:
         print('-i <inputfile> -t <csv or pcap (default is csv)>')
         sys.exit(2)
-
     for opt, arg in opts:
-        if opt == ('-h', '--help'):
+        if opt in ('-h', '--help'):
             print("-i <inputfile> -t <csv or pcap (default is csv)> -x <show time>")
             sys.exit()
         elif opt in ('-i', '--ifile'):

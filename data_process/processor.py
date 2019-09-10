@@ -33,7 +33,7 @@ class DataProcessor(object):
         self.ip_set = {}
         self.max_time = -1.0
         self.all_time = all_time
-        self.msg_queue = queue.Queue()
+        self.msg_queue = []
 
     def _save_res(self):
         json_str = json.dumps({'point_data': self.res})
@@ -59,6 +59,11 @@ class DataProcessor(object):
             p['link'] = list(filter(condition, p['link']))
             
     def check_switch(self, ip):
+        '''
+        判断是否是交换机
+        :param ip: ip
+        :return: True or False
+        '''
         for switch in swith_list:
             if switch in ip:
                 return True
@@ -118,7 +123,7 @@ class DataProcessor(object):
         except Exception:
             raise Exception('Time data is wrong %s !' % str(timestamp))
 
-        self.msg_queue.put(dict(startTime=startTime,
+        self.msg_queue.append(dict(startTime=startTime,
                                 srcID=self.ip_set[source_ip],
                                 desID=self.ip_set[des_ip],
                                 timeLength=1))
@@ -132,8 +137,8 @@ class DataProcessor(object):
             raise Exception('ERROR: This data has wrong time data! --- max_time has wrong %f' %  self.max_time)
 
         last_msg = None
-        while(self.msg_queue.empty() == False):
-            msg = self.msg_queue.get()
+        for msg in self.msg_queue:
+            # msg = self.msg_queue.get()
             try:
                 index = math.ceil(self.all_time * msg['startTime'] / self.max_time)
             except Exception:
@@ -163,9 +168,17 @@ class DataProcessor(object):
         add_point_time = 0
         add_msg_time = 0
         cnt = 0
+        sum = 1
+
         with open(self.input_file, 'rb') as f:
             for xline in f:
-                t0 = time.clock()
+                cnt += 1
+                if cnt > 100000:
+                    print('已处理%d条' % (sum*100000))
+                    sum += 1
+                    cnt = 0
+
+                # t0 = time.time()
                 if is_first_line:
                     is_first_line = False
                     continue
@@ -181,21 +194,18 @@ class DataProcessor(object):
 
                 if source_ip == '' or des_ip == '':
                     continue
-                read_time += time.clock() - t0
-                t0 = time.clock()
+                # read_time += time.time() - t0
+                # t0 = time.time()
                 self.add_point(source_ip, des_ip)
-                add_point_time += time.clock() - t0
-                t0 = time.clock()
+                # add_point_time += time.time() - t0
+                # t0 = time.time()
                 self.add_message(real_time, source_ip, des_ip)
-                add_msg_time += time.clock() - t0
-                # cnt += 1
-                # if cnt > 1000:
-                #     break
+                # add_msg_time += time.time() - t0
 
         f.close()
-        print(read_time)
-        print(add_point_time)
-        print(add_msg_time)
+        # print(read_time)
+        # print(add_point_time)
+        # print(add_msg_time)
 
     def process_pcap(self):
         is_first_line = True
@@ -228,23 +238,20 @@ class DataProcessor(object):
         else:
             self.process_pcap()
 
-        # t0 = time.clock()
+        t0 = time.time()
         analyzer = Analyzer(self.res)
         self.res = analyzer.process()
-        # print(time.clock() - t0)
+        print(time.time() - t0)
 
-        # for p in self.res:
-        #     print("%s: %s" % (p['id'], str(p['link'])))
-        # self.remove_duplicates()
-        # t0 = time.clock()
+        # t0 = time.time()
         self._save_res()
-        # print(time.clock() - t0)
-        # t0 = time.clock()
+        # print(time.time() - t0)
+        # t0 = time.time()
         self.trans_time_axis()
-        # print(time.clock() - t0)
-        # t0 = time.clock()
+        # print(time.time() - t0)
+        # t0 = time.time()
         self._save_send()
-        # print(time.clock() - t0)
+        # print(time.time() - t0)
         print('sucess')
 
 
