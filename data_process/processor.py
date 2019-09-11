@@ -7,6 +7,7 @@ import queue
 from data_analyze.analysis import Analyzer
 from scapy.all import *
 import time
+import gc
 
 sys.path.append('../')
 
@@ -173,12 +174,12 @@ class DataProcessor(object):
         with open(self.input_file, 'rb') as f:
             for xline in f:
                 cnt += 1
-                if cnt > 100000:
-                    print('已处理%d条' % (sum*100000))
+                if cnt > 1000000:
+                    print('已处理%d条' % (sum*1000000))
                     sum += 1
                     cnt = 0
 
-                # t0 = time.time()
+                t0 = time.time()
                 if is_first_line:
                     is_first_line = False
                     continue
@@ -194,25 +195,34 @@ class DataProcessor(object):
 
                 if source_ip == '' or des_ip == '':
                     continue
-                # read_time += time.time() - t0
-                # t0 = time.time()
+                read_time += time.time() - t0
+                t0 = time.time()
                 self.add_point(source_ip, des_ip)
-                # add_point_time += time.time() - t0
-                # t0 = time.time()
+                add_point_time += time.time() - t0
+                t0 = time.time()
                 self.add_message(real_time, source_ip, des_ip)
-                # add_msg_time += time.time() - t0
+                add_msg_time += time.time() - t0
 
         f.close()
-        # print(read_time)
-        # print(add_point_time)
-        # print(add_msg_time)
+        print("读文件耗时：%f" % read_time)
+        print("处理节点信息耗时：%f" % add_point_time)
+        print("报文消息处理耗时： %f" % add_msg_time)
 
     def process_pcap(self):
         is_first_line = True
         time = 0
         pcap = rdpcap(self.input_file)
+        cnt = 0
+        sum = 1
+
         for data in pcap:
             time += 1
+
+            cnt += 1
+            if cnt > 1000000:
+                print('已处理%d条' % (sum * 1000000))
+                sum += 1
+                cnt = 0
 
             if is_first_line:
                 is_first_line = False
@@ -237,12 +247,13 @@ class DataProcessor(object):
             self.process_csv()
         else:
             self.process_pcap()
+        gc.collect()
 
         t0 = time.time()
         analyzer = Analyzer(self.res)
         self.res = analyzer.process()
-        print(time.time() - t0)
-
+        print("位置计算耗时： %f" % (time.time() - t0))
+        gc.collect()
         # t0 = time.time()
         self._save_res()
         # print(time.time() - t0)
